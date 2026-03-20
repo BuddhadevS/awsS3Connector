@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -23,24 +24,20 @@ public class AwsConfig {
 
     @Bean
     public S3Client s3Client() {
-        AwsBasicCredentials creds =
-                AwsBasicCredentials.create(access, secret);
-
-        return S3Client.builder()
-                .credentialsProvider(StaticCredentialsProvider.create(creds))
-                .region(Region.of(region))
-                .build();
+        return S3Client.builder().credentialsProvider(resolveCredentials()).region(Region.of(region)).build();
     }
 
     @Bean
     public S3Presigner s3Presigner() {
-        AwsBasicCredentials creds =
-                AwsBasicCredentials.create(access, secret);
+        return S3Presigner.builder().credentialsProvider(resolveCredentials()).region(Region.of(region)).build();
+    }
 
-        return S3Presigner.builder()
-                .credentialsProvider(StaticCredentialsProvider.create(creds))
-                .region(Region.of(region))
-                .build();
+    private software.amazon.awssdk.auth.credentials.AwsCredentialsProvider resolveCredentials() {
+        if (access != null && !access.isBlank() && secret != null && !secret.isBlank()) {
+            AwsBasicCredentials creds = AwsBasicCredentials.create(access, secret);
+            return StaticCredentialsProvider.create(creds);
+        }
+        return DefaultCredentialsProvider.create();
     }
 }
 
